@@ -1,0 +1,7 @@
+strands-agents[litellm]
+strands-agents-tools
+mcp
+python-dotenv
+markdown
+weasyprint
+Pillow

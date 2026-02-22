@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "webapt"
+version = "0.1.0"
+description = "Web Application Access and Analysis Checker"
+requires-python = ">=3.11"
+dependencies = [
+    "strands-agents[litellm]",
+    "strands-agents-tools",
+    "mcp",
+    "python-dotenv",
+    "markdown",
+    "weasyprint",
+    "Pillow",
+]
+
+[project.optional-dependencies]
+gemini = ["google-genai"]
+
+[project.scripts]
+webapt = "webapt.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["webapt*"]

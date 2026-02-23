@@ -31,6 +31,12 @@ class WebAPTConfig:
     # Browser
     headless: bool = True
 
+    # Langfuse observability
+    langfuse_enabled: bool = True
+    langfuse_public_key: str = ""
+    langfuse_secret_key: str = ""
+    langfuse_host: str = "http://localhost:3000"
+
     @classmethod
     def from_env(cls, project_name: str | None = None) -> "WebAPTConfig":
         """Build config from environment variables."""
@@ -73,6 +79,10 @@ class WebAPTConfig:
             project_name=proj,
             output_root=Path(os.environ.get("WEBAPT_OUTPUT_ROOT", "./outputs")),
             headless=os.environ.get("WEBAPT_HEADLESS", "true").lower() in ("true", "1", "yes"),
+            langfuse_enabled=os.environ.get("LANGFUSE_ENABLED", "true").lower() in ("true", "1", "yes"),
+            langfuse_public_key=os.environ.get("LANGFUSE_PUBLIC_KEY", ""),
+            langfuse_secret_key=os.environ.get("LANGFUSE_SECRET_KEY", ""),
+            langfuse_host=os.environ.get("LANGFUSE_HOST", "http://localhost:3000"),
         )
 
     @property

@@ -2,6 +2,27 @@
 
 import re
 
+try:
+    from langfuse.decorators import observe, langfuse_context
+    _LANGFUSE_AVAILABLE = True
+except ImportError:
+    # Langfuse not installed — provide no-op fallbacks
+    _LANGFUSE_AVAILABLE = False
+
+    def observe(func=None, **kwargs):  # type: ignore[misc]
+        """No-op decorator when langfuse is not installed."""
+        if func is not None:
+            return func
+        def decorator(f):
+            return f
+        return decorator
+
+    class _NoopContext:
+        def update_current_trace(self, **kwargs):
+            pass
+
+    langfuse_context = _NoopContext()  # type: ignore[assignment]
+
 from .agents.accessibility_checker import build_accessibility_checker
 from .agents.application_analyzer import build_application_analyzer
 from .agents.qa_verifier import build_qa_verifier
@@ -22,6 +43,7 @@ def extract_urls(text: str) -> list:
 
 # ── Internal pipeline helpers ─────────────────────────────────────────────────
 
+@observe()
 def _run_pipeline_single(
     user_input: str,
     config: WebAPTConfig,
@@ -94,6 +116,7 @@ def _run_pipeline_single(
     return "\n".join(results)
 
 
+@observe()
 def _run_qa(user_input: str, config: WebAPTConfig, url_prefix: str = "") -> tuple:
     """Run the QA verifier step. Returns (result_lines, verdict_str)."""
     qa_task = (
@@ -137,6 +160,7 @@ def _run_qa(user_input: str, config: WebAPTConfig, url_prefix: str = "") -> tupl
     return results, verdict_str
 
 
+@observe()
 def _run_pdf(config: WebAPTConfig, url_prefix: str = "") -> str:
     """Run PDF conversion step. Returns a result line."""
     try:
@@ -202,6 +226,7 @@ def _build_combined_summary(urls: list, per_url_results: list, config: WebAPTCon
 
 # ── Public API ────────────────────────────────────────────────────────────────
 
+@observe()
 def run_full_pipeline(user_input: str, config: WebAPTConfig) -> str:
     """Run the full WebAPT pipeline: Accessibility -> Analysis -> QA -> PDF.
 
@@ -215,6 +240,11 @@ def run_full_pipeline(user_input: str, config: WebAPTConfig) -> str:
     Returns:
         Summary of the pipeline run.
     """
+    langfuse_context.update_current_trace(
+        name="run_full_pipeline",
+        input=user_input,
+        metadata={"project": config.project_name},
+    )
     urls = extract_urls(user_input)
 
     if len(urls) <= 1:
@@ -254,6 +284,7 @@ def run_full_pipeline(user_input: str, config: WebAPTConfig) -> str:
     return _build_combined_summary(urls, all_results, config)
 
 
+@observe()
 def run_accessibility_only(user_input: str, config: WebAPTConfig) -> str:
     """Run accessibility agent + QA + PDF only (no analysis agent).
 
@@ -264,6 +295,11 @@ def run_accessibility_only(user_input: str, config: WebAPTConfig) -> str:
     Returns:
         Summary of the accessibility scan.
     """
+    langfuse_context.update_current_trace(
+        name="run_accessibility_only",
+        input=user_input,
+        metadata={"project": config.project_name},
+    )
     config.ensure_dirs()
     model = build_model(config)
 
@@ -333,6 +369,7 @@ def run_accessibility_only(user_input: str, config: WebAPTConfig) -> str:
     return summary
 
 
+@observe()
 def run_analysis_only(user_input: str, config: WebAPTConfig) -> str:
     """Run analysis agent + QA + PDF only (no accessibility agent).
 
@@ -343,6 +380,11 @@ def run_analysis_only(user_input: str, config: WebAPTConfig) -> str:
     Returns:
         Summary of the analysis scan.
     """
+    langfuse_context.update_current_trace(
+        name="run_analysis_only",
+        input=user_input,
+        metadata={"project": config.project_name},
+    )
     config.ensure_dirs()
     model = build_model(config)
 
@@ -412,6 +454,7 @@ def run_analysis_only(user_input: str, config: WebAPTConfig) -> str:
     return summary
 
 
+@observe()
 def run_single_agent(
     agent_type: str,
     user_input: str,
@@ -429,6 +472,11 @@ def run_single_agent(
     Returns:
         Agent result summary.
     """
+    langfuse_context.update_current_trace(
+        name=f"run_single_agent_{agent_type}",
+        input=user_input,
+        metadata={"project": config.project_name, "agent_type": agent_type},
+    )
     config.ensure_dirs()
     model = build_model(config)
 

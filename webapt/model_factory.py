@@ -14,6 +14,18 @@ def build_model(config: WebAPTConfig):
     Returns an OpenAIModel (LiteLLM proxy) or GeminiModel depending on config.provider.
     Also configures LiteLLM Langfuse callbacks when Langfuse is enabled.
     """
+    # Patch OpenAI SDK with Langfuse wrapper if configured — must happen BEFORE
+    # Strands instantiates the OpenAI client so every prompt/response is traced.
+    if config.langfuse_enabled and config.langfuse_public_key:
+        try:
+            from langfuse.openai import openai as langfuse_openai
+            import openai as _openai_module
+            # Patch openai module attributes so Strands picks up the instrumented client
+            _openai_module.OpenAI = langfuse_openai.OpenAI
+            _openai_module.AsyncOpenAI = langfuse_openai.AsyncOpenAI
+        except ImportError:
+            pass  # langfuse not installed — skip wrapper patch
+
     if not config.api_key:
         print(f"Error: No API key configured for provider '{config.provider}'.")
         print("Set LITELLM_V_KEY or GEMINI_API_KEY in your .env file.")

@@ -244,6 +244,9 @@ def run_full_pipeline(user_input: str, config: WebAPTConfig) -> str:
         name="run_full_pipeline",
         input=user_input,
         metadata={"project": config.project_name},
+        session_id=config.project_name,
+        user_id="webapt",
+        tags=["webapt", "full-pipeline"],
     )
     urls = extract_urls(user_input)
 
@@ -299,6 +302,9 @@ def run_accessibility_only(user_input: str, config: WebAPTConfig) -> str:
         name="run_accessibility_only",
         input=user_input,
         metadata={"project": config.project_name},
+        session_id=config.project_name,
+        user_id="webapt",
+        tags=["webapt", "accessibility"],
     )
     config.ensure_dirs()
     model = build_model(config)
@@ -384,6 +390,9 @@ def run_analysis_only(user_input: str, config: WebAPTConfig) -> str:
         name="run_analysis_only",
         input=user_input,
         metadata={"project": config.project_name},
+        session_id=config.project_name,
+        user_id="webapt",
+        tags=["webapt", "analysis"],
     )
     config.ensure_dirs()
     model = build_model(config)
@@ -476,6 +485,9 @@ def run_single_agent(
         name=f"run_single_agent_{agent_type}",
         input=user_input,
         metadata={"project": config.project_name, "agent_type": agent_type},
+        session_id=config.project_name,
+        user_id="webapt",
+        tags=["webapt", agent_type],
     )
     config.ensure_dirs()
     model = build_model(config)

@@ -39,8 +39,9 @@ def build_application_analyzer(
 
 ## Output Paths (use these exact paths)
 - Reports directory: {config.analysis_reports_dir}
-- Screenshots directory: {config.screenshots_dir}
-- Use output_dir="{config.screenshots_dir}" when calling save_screenshot_with_metadata
+- Screenshots directory: {config.analysis_screenshots_dir}
+- Use output_dir="{config.screenshots_dir}" and agent_name="analysis" when calling save_screenshot_with_metadata
+- Always pass agent_name='analysis' when calling save_screenshot_with_metadata
 - Write the analysis report to: {config.analysis_reports_dir}/analysis.md
 """
 

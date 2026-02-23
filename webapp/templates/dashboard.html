@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — AppLens{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">DASHBOARD</h1>
+        <p class="page-subtitle">Submit tasks and monitor the analysis queue</p>
+    </div>
+    <div class="page-meta">
+        <div class="meta-chip">
+            <span class="meta-dot {% if running %}status-running{% else %}status-idle{% endif %}"></span>
+            <span>{% if running %}RUNNING{% else %}IDLE{% endif %}</span>
+        </div>
+        <div class="meta-chip">
+            <span class="meta-label">QUEUE</span>
+            <span class="meta-value" id="queueCount">{{ queue_length }}</span>
+        </div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+
+    <!-- Submit Task Panel -->
+    <section class="panel panel-submit">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="panel-icon">⊕</span>
+                Submit Task
+            </h2>
+        </div>
+        <form class="task-form" method="POST" action="{{ url_for('submit_task') }}">
+            <!-- Scan Type Selection -->
+            <div class="form-row">
+                <div class="field-group">
+                    <label class="field-label">SCAN TYPE</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="scan_type" value="accessibility" checked>
+                            <span class="radio-custom"></span>
+                            <span class="radio-label">
+                                <span class="radio-name">Accessibility</span>
+                                <span class="radio-desc">WCAG audit, login roles, screenshots</span>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="scan_type" value="analysis">
+                            <span class="radio-custom"></span>
+                            <span class="radio-label">
+                                <span class="radio-name">Analysis</span>
+                                <span class="radio-desc">App structure, APIs, tech stack</span>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="scan_type" value="both">
+                            <span class="radio-custom"></span>
+                            <span class="radio-label">
+                                <span class="radio-name">Both</span>
+                                <span class="radio-desc">Full scan — two separate reports &amp; PDFs</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field-group">
+                    <label class="field-label" for="task_input">TASK</label>
+                    <textarea class="field-textarea" id="task_input" name="task_input"
+                              placeholder="Describe your task. Examples:&#10;• https://example.com&#10;• Check https://myapp.com - login as admin with credentials admin/password123&#10;• Analyze https://app.com and https://staging.app.com - use admin/pass for both&#10;• https://myapp.com/dashboard, https://myapp.com/settings - credentials: user@email.com / pass123"
+                              rows="5" required></textarea>
+                    <p style="margin-top:6px; font-size:11px; color:var(--text-dim);">
+                        Multiple URLs processed sequentially. Select scan type above.
+                    </p>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field-group">
+                    <label class="field-label" for="project_name">PROJECT NAME <span class="optional">(optional — auto-generated from URL)</span></label>
+                    <div class="field-wrapper">
+                        <span class="field-prefix">#</span>
+                        <input class="field-input" type="text" id="project_name" name="project_name"
+                               placeholder="auto-generated if empty" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                {% if running or queue_length > 0 %}
+                <div class="queue-notice">
+                    <span class="notice-icon">⚡</span>
+                    {% if running %}
+                        A task is currently running. Yours will be queued at position #{{ queue_length + 2 }}.
+                    {% else %}
+                        {{ queue_length }} task(s) ahead. Yours will be queued at position #{{ queue_length + 1 }}.
+                    {% endif %}
+                </div>
+                {% endif %}
+                <button class="submit-btn" type="submit">
+                    <span>QUEUE TASK</span>
+                    <span class="submit-arrow">→</span>
+                </button>
+            </div>
+        </form>
+    </section>
+
+    <!-- Live Queue Panel -->
+    <section class="panel panel-queue">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="panel-icon">≡</span>
+                Live Queue
+            </h2>
+            <div class="live-badge">
+                <span class="live-dot"></span>
+                LIVE
+            </div>
+        </div>
+
+        <div id="queueContainer">
+            <!-- Running task -->
+            {% if running %}
+            <div class="queue-item queue-running" data-task-id="{{ running.id }}">
+                <div class="qi-pos">
+                    <div class="spinner"></div>
+                </div>
+                <div class="qi-info">
+                    <div class="qi-top">
+                        <span class="qi-type type-{{ running.task_type }}">{{ running.task_type.upper() }}</span>
+                        <span class="qi-url">{{ running.target_url }}</span>
+                    </div>
+                    <div class="qi-meta">
+                        <span class="qi-user">{{ running.username }}</span>
+                        <span class="qi-sep">·</span>
+                        <span class="qi-time">started {{ running.started_at }}</span>
+                    </div>
+                </div>
+                <div class="qi-status">
+                    <span class="status-badge running">RUNNING</span>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Queued tasks -->
+            {% if queued %}
+                {% for task in queued %}
+                <div class="queue-item" data-task-id="{{ task.id }}">
+                    <div class="qi-pos">
+                        <span class="pos-number">{{ loop.index + (1 if running else 0) }}</span>
+                    </div>
+                    <div class="qi-info">
+                        <div class="qi-top">
+                            <span class="qi-type type-{{ task.task_type }}">{{ task.task_type.upper() }}</span>
+                            <span class="qi-url">{{ task.target_url }}</span>
+                        </div>
+                        <div class="qi-meta">
+                            <span class="qi-user">{{ task.username }}</span>
+                            <span class="qi-sep">·</span>
+                            <span class="qi-time">{{ task.created_at }}</span>
+                        </div>
+                    </div>
+                    <div class="qi-actions">
+                        {% if task.user_id == user.id %}
+                        <form method="POST" action="{{ url_for('cancel_task', task_id=task.id) }}" class="inline-form">
+                            <button class="cancel-btn" type="submit" title="Cancel task">✕</button>
+                        </form>
+                        {% endif %}
+                        <span class="status-badge queued">QUEUED</span>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not running and not queued %}
+            <div class="queue-empty" id="queueEmpty">
+                <div class="empty-icon">◈</div>
+                <p>Queue is empty</p>
+                <p class="empty-sub">Submit a task to get started</p>
+            </div>
+            {% endif %}
+        </div>
+    </section>
+
+    <!-- My Tasks History -->
+    <section class="panel panel-history">
+        <div class="panel-header">
+            <h2 class="panel-title">
+                <span class="panel-icon">◷</span>
+                My Tasks
+            </h2>
+        </div>
+
+        {% if my_tasks %}
+        <div class="tasks-table-wrapper">
+            <table class="tasks-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Type</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in my_tasks %}
+                    <tr class="task-row status-row-{{ task.status }}">
+                        <td class="td-id">{{ task.id }}</td>
+                        <td><span class="type-badge type-{{ task.task_type }}">{% if task.task_type == 'full' %}BOTH{% else %}{{ task.task_type }}{% endif %}</span></td>
+                        <td class="td-url">
+                            <span class="url-text">
+                                {% if task.target_url %}
+                                    {{ task.target_url }}
+                                {% elif task.extra_task %}
+                                    {{ task.extra_task[:60] }}{% if task.extra_task|length > 60 %}…{% endif %}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge {{ task.status }}">{{ task.status.upper() }}</span>
+                        </td>
+                        <td class="td-time">{{ task.created_at[:16] }}</td>
+                        <td style="white-space: nowrap;">
+                            <a href="{{ url_for('task_detail', task_id=task.id) }}" class="view-btn">View →</a>
+                            {% if task.status == 'done' %}
+                            <a href="{{ url_for('task_detail', task_id=task.id) }}#downloads"
+                               class="view-btn"
+                               title="Downloads"
+                               style="margin-left: 6px; text-decoration:none; opacity:0.8;"
+                               >⬇</a>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="queue-empty">
+            <div class="empty-icon">◈</div>
+            <p>No tasks yet</p>
+        </div>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// SSE live queue updates
+const queueContainer = document.getElementById('queueContainer');
+const queueCount = document.getElementById('queueCount');
+
+const evtSource = new EventSource('/events');
+
+evtSource.addEventListener('queue_updated', (e) => {
+    const data = JSON.parse(e.data);
+    updateQueue(data.queue);
+});
+
+evtSource.addEventListener('task_started', (e) => {
+    const data = JSON.parse(e.data);
+    showToast(`Task #${data.task_id} started: ${data.task_type} → ${data.target_url}`, 'info');
+});
+
+evtSource.addEventListener('task_done', (e) => {
+    const data = JSON.parse(e.data);
+    showToast(`Task #${data.task_id} completed!`, 'success');
+    setTimeout(() => location.reload(), 1500);
+});
+
+evtSource.addEventListener('task_failed', (e) => {
+    const data = JSON.parse(e.data);
+    showToast(`Task #${data.task_id} failed: ${data.error}`, 'error');
+    setTimeout(() => location.reload(), 2000);
+});
+
+function updateQueue(queue) {
+    const running = queue.find(t => t.status === 'running');
+    const queued = queue.filter(t => t.status === 'queued');
+
+    // Update count chip
+    if (queueCount) queueCount.textContent = queued.length;
+
+    // Rebuild queue HTML
+    let html = '';
+
+    if (running) {
+        html += `
+        <div class="queue-item queue-running" data-task-id="${running.id}">
+            <div class="qi-pos"><div class="spinner"></div></div>
+            <div class="qi-info">
+                <div class="qi-top">
+                    <span class="qi-type type-${running.task_type}">${running.task_type.toUpperCase()}</span>
+                    <span class="qi-url">${escHtml(running.target_url)}</span>
+                </div>
+                <div class="qi-meta">
+                    <span class="qi-user">${escHtml(running.username || '')}</span>
+                    <span class="qi-sep">·</span>
+                    <span class="qi-time">started ${escHtml(running.started_at || '')}</span>
+                </div>
+            </div>
+            <div class="qi-status"><span class="status-badge running">RUNNING</span></div>
+        </div>`;
+    }
+
+    queued.forEach((task, i) => {
+        const pos = i + 1 + (running ? 1 : 0);
+        html += `
+        <div class="queue-item" data-task-id="${task.id}">
+            <div class="qi-pos"><span class="pos-number">${pos}</span></div>
+            <div class="qi-info">
+                <div class="qi-top">
+                    <span class="qi-type type-${task.task_type}">${task.task_type.toUpperCase()}</span>
+                    <span class="qi-url">${escHtml(task.target_url)}</span>
+                </div>
+                <div class="qi-meta">
+                    <span class="qi-user">${escHtml(task.username || '')}</span>
+                    <span class="qi-sep">·</span>
+                    <span class="qi-time">${escHtml(task.created_at || '')}</span>
+                </div>
+            </div>
+            <div class="qi-status"><span class="status-badge queued">QUEUED</span></div>
+        </div>`;
+    });
+
+    if (!running && queued.length === 0) {
+        html = `<div class="queue-empty"><div class="empty-icon">◈</div><p>Queue is empty</p><p class="empty-sub">Submit a task to get started</p></div>`;
+    }
+
+    if (queueContainer) queueContainer.innerHTML = html;
+}
+
+function escHtml(str) {
+    return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.className = `toast toast-${type}`;
+    toast.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✕' : '⚡'}</span> ${escHtml(message)}`;
+    document.body.appendChild(toast);
+    setTimeout(() => toast.classList.add('toast-show'), 10);
+    setTimeout(() => {
+        toast.classList.remove('toast-show');
+        setTimeout(() => toast.remove(), 400);
+    }, 4000);
+}
+
+// Auto-dismiss flash messages
+document.querySelectorAll('.flash').forEach(el => {
+    setTimeout(() => el.style.opacity = '0', 3000);
+    setTimeout(() => el.remove(), 3400);
+});
+</script>
+{% endblock %}

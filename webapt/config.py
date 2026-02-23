@@ -92,6 +92,14 @@ class WebAPTConfig:
         return self.project_dir / "screenshots"
 
     @property
+    def accessibility_screenshots_dir(self) -> Path:
+        return self.screenshots_dir / "accessibility"
+
+    @property
+    def analysis_screenshots_dir(self) -> Path:
+        return self.screenshots_dir / "analysis"
+
+    @property
     def pdf_dir(self) -> Path:
         return self.project_dir / "pdf"
 
@@ -105,6 +113,8 @@ class WebAPTConfig:
             self.accessibility_reports_dir,
             self.analysis_reports_dir,
             self.screenshots_dir,
+            self.accessibility_screenshots_dir,
+            self.analysis_screenshots_dir,
             self.pdf_dir,
             self.sessions_dir,
         ):

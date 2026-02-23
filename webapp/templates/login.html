@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AppLens — Login</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body class="login-body">
+    <div class="login-bg">
+        <div class="login-grid"></div>
+        <div class="login-noise"></div>
+    </div>
+
+    <div class="login-wrapper">
+        <div class="login-panel">
+            <div class="login-header">
+                <div class="login-logo">
+                    <div class="logo-hex">⬡</div>
+                    <div class="logo-rings">
+                        <div class="ring ring-1"></div>
+                        <div class="ring ring-2"></div>
+                        <div class="ring ring-3"></div>
+                    </div>
+                </div>
+                <h1 class="login-title">APP<span class="accent">LENS</span></h1>
+                <p class="login-subtitle">Web Application Analysis Platform</p>
+            </div>
+
+            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+            <div class="login-errors">
+                {% for category, message in messages %}
+                <div class="flash flash-{{ category }}">
+                    <span class="flash-icon">{% if category == 'error' %}✕{% else %}✓{% endif %}</span>
+                    {{ message }}
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <form class="login-form" method="POST" action="{{ url_for('login') }}{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">
+                <div class="field-group">
+                    <label class="field-label" for="username">USERNAME</label>
+                    <div class="field-wrapper">
+                        <span class="field-prefix">$</span>
+                        <input
+                            class="field-input"
+                            type="text"
+                            id="username"
+                            name="username"
+                            autocomplete="username"
+                            autocorrect="off"
+                            autocapitalize="off"
+                            spellcheck="false"
+                            required
+                            autofocus
+                        >
+                        <span class="field-cursor"></span>
+                    </div>
+                </div>
+
+                <div class="field-group">
+                    <label class="field-label" for="password">PASSWORD</label>
+                    <div class="field-wrapper">
+                        <span class="field-prefix">*</span>
+                        <input
+                            class="field-input"
+                            type="password"
+                            id="password"
+                            name="password"
+                            autocomplete="current-password"
+                            required
+                        >
+                        <span class="field-cursor"></span>
+                    </div>
+                </div>
+
+                <button class="login-btn" type="submit">
+                    <span class="login-btn-text">AUTHENTICATE</span>
+                    <span class="login-btn-arrow">→</span>
+                </button>
+            </form>
+
+            <div class="login-footer">
+                <span class="login-version">v0.1.0</span>
+                <span class="login-dot">·</span>
+                <span class="login-status">
+                    <span class="status-dot status-online"></span>
+                    SYSTEM ONLINE
+                </span>
+            </div>
+        </div>
+
+        <div class="login-terminal">
+            <div class="terminal-header">
+                <span class="t-dot t-red"></span>
+                <span class="t-dot t-yellow"></span>
+                <span class="t-dot t-green"></span>
+                <span class="t-title">system.log</span>
+            </div>
+            <div class="terminal-body" id="terminalLog">
+                <div class="t-line"><span class="t-prompt">›</span> <span class="t-cmd">Initializing AppLens...</span></div>
+                <div class="t-line t-dim"><span class="t-prompt">›</span> Loading accessibility scanner</div>
+                <div class="t-line t-dim"><span class="t-prompt">›</span> Loading application analyzer</div>
+                <div class="t-line t-dim"><span class="t-prompt">›</span> Connecting to LLM proxy</div>
+                <div class="t-line t-success"><span class="t-prompt">✓</span> Queue system ready</div>
+                <div class="t-line t-success"><span class="t-prompt">✓</span> All systems operational</div>
+                <div class="t-line t-cursor"><span class="t-prompt">›</span> <span class="t-blink">_</span></div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

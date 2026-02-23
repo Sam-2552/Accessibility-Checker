@@ -4,6 +4,9 @@
 # Data & outputs
 outputs/
 *.png
+*.db
+webapp/*.json
+webapp/gunicorn.ctl
 
 # Python
 .venv/

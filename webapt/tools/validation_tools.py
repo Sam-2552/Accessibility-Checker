@@ -6,6 +6,50 @@ from pathlib import Path
 from strands import tool
 
 
+def parse_qa_verdict(qa_report_path: str) -> dict:
+    """Parse the VERDICT block from qa_report.md.
+
+    Looks for the machine-readable block at the end of the QA report:
+
+        ## VERDICT
+        - accessibility_report: PASS|FAIL|MISSING
+        - analysis_report: PASS|FAIL|MISSING
+        - screenshots_accessibility: PASS|FAIL|MISSING
+        - screenshots_analysis: PASS|FAIL|MISSING
+        - overall: PASS|PARTIAL|FAIL
+
+    Returns:
+        dict with keys: overall, accessibility_report, analysis_report,
+        screenshots_accessibility, screenshots_analysis.
+        Returns {'overall': 'UNKNOWN'} if the block is not present or not parseable.
+    """
+    p = Path(qa_report_path)
+    if not p.exists():
+        return {"overall": "UNKNOWN"}
+
+    content = p.read_text(encoding="utf-8")
+
+    # Find the VERDICT block (case-insensitive header)
+    verdict_match = re.search(r"##\s+VERDICT\s*\n((?:- \S+:\s*\S+\s*\n?)+)", content, re.IGNORECASE)
+    if not verdict_match:
+        return {"overall": "UNKNOWN"}
+
+    block = verdict_match.group(1)
+    result: dict = {}
+
+    for line in block.splitlines():
+        m = re.match(r"-\s+(\w+):\s*(\w+)", line.strip())
+        if m:
+            key = m.group(1).lower()
+            value = m.group(2).upper()
+            result[key] = value
+
+    if "overall" not in result:
+        return {"overall": "UNKNOWN"}
+
+    return result
+
+
 @tool
 def check_file_exists(file_path: str) -> str:
     """Check if a file exists on disk.

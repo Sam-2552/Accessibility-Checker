@@ -41,8 +41,9 @@ def build_accessibility_checker(
 
 ## Output Paths (use these exact paths)
 - Reports directory: {config.accessibility_reports_dir}
-- Screenshots directory: {config.screenshots_dir}
-- Use output_dir="{config.screenshots_dir}" when calling save_screenshot_with_metadata
+- Screenshots directory: {config.accessibility_screenshots_dir}
+- Use output_dir="{config.screenshots_dir}" and agent_name="accessibility" when calling save_screenshot_with_metadata
+- Always pass agent_name='accessibility' when calling save_screenshot_with_metadata
 """
 
     return Agent(

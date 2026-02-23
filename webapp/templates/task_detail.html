@@ -1,0 +1,239 @@
+{% extends "base.html" %}
+{% block title %}Task #{{ task.id }} — AppLens{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">TASK #{{ task.id }}</h1>
+        <p class="page-subtitle">
+            {% if task.task_type == 'full' %}BOTH{% else %}{{ task.task_type.upper() }}{% endif %} —
+            {% if task.target_url %}{{ task.target_url }}{% elif task.extra_task %}{{ task.extra_task[:60] }}{% if task.extra_task|length > 60 %}…{% endif %}{% else %}—{% endif %}
+        </p>
+    </div>
+    <div class="page-meta">
+        <span class="status-badge {{ task.status }}">{{ task.status.upper() }}</span>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+
+    <!-- Task Info Panel -->
+    <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+            <h2 class="panel-title"><span class="panel-icon">◈</span> Task Details</h2>
+        </div>
+        <div style="padding: 24px; display: grid; gap: 16px; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));">
+            <div>
+                <span class="field-label">SCAN TYPE</span>
+                <p style="margin-top:4px">
+                    {% if task.task_type == 'accessibility' %}
+                        <span class="type-badge type-accessibility">ACCESSIBILITY</span>
+                    {% elif task.task_type == 'analysis' %}
+                        <span class="type-badge type-analysis">ANALYSIS</span>
+                    {% else %}
+                        <span class="type-badge type-full">BOTH</span>
+                    {% endif %}
+                </p>
+            </div>
+            <div>
+                <span class="field-label">STATUS</span>
+                <p style="margin-top:4px"><span class="status-badge {{ task.status }}">{{ task.status.upper() }}</span></p>
+            </div>
+            <div>
+                <span class="field-label">PROJECT</span>
+                <p style="margin-top:4px; font-family: var(--font-mono)">{{ task.project_name }}</p>
+            </div>
+            <div>
+                <span class="field-label">TARGET URL</span>
+                <p style="margin-top:4px; font-family: var(--font-mono); word-break: break-all;">
+                    <a href="{{ task.target_url }}" target="_blank" rel="noopener" style="color: var(--accent)">{{ task.target_url }}</a>
+                </p>
+            </div>
+            {% if task.extra_task %}
+            <div style="grid-column: 1 / -1">
+                <span class="field-label">TASK INPUT</span>
+                <pre style="margin-top:4px; white-space: pre-wrap; font-size:13px; font-family:var(--font-mono); background:var(--surface-1); padding:12px; border-radius:6px; border:1px solid var(--border);">{{ task.extra_task }}</pre>
+            </div>
+            {% endif %}
+            <div>
+                <span class="field-label">CREATED</span>
+                <p style="margin-top:4px; font-family: var(--font-mono)">{{ task.created_at }}</p>
+            </div>
+            {% if task.started_at %}
+            <div>
+                <span class="field-label">STARTED</span>
+                <p style="margin-top:4px; font-family: var(--font-mono)">{{ task.started_at }}</p>
+            </div>
+            {% endif %}
+            {% if task.finished_at %}
+            <div>
+                <span class="field-label">FINISHED</span>
+                <p style="margin-top:4px; font-family: var(--font-mono)">{{ task.finished_at }}</p>
+            </div>
+            {% endif %}
+            {% if task.output_dir %}
+            <div>
+                <span class="field-label">OUTPUT DIR</span>
+                <p style="margin-top:4px; font-family: var(--font-mono); font-size: 12px; color: var(--text-dim)">{{ task.output_dir }}</p>
+            </div>
+            {% endif %}
+        </div>
+
+        {% if task.result_summary %}
+        <div style="padding: 0 24px 24px;">
+            <span class="field-label">RESULT SUMMARY</span>
+            <pre style="margin-top:8px; white-space: pre-wrap; font-size: 13px; font-family: var(--font-mono); background: var(--surface-1); padding: 16px; border-radius: 6px; border: 1px solid var(--border); max-height: 300px; overflow-y: auto;">{{ task.result_summary }}</pre>
+        </div>
+        {% endif %}
+
+        <div style="padding: 0 24px 24px;">
+            <a href="{{ url_for('dashboard') }}" class="submit-btn" style="display:inline-flex; text-decoration:none;">← Back to Dashboard</a>
+        </div>
+    </section>
+
+    <!-- Downloads Panel (only shown when task is done and files exist) -->
+    {% if task.status == 'done' and (files.pdfs or files.reports or files.screenshots) %}
+    <section class="panel" id="downloads" style="grid-column: 1 / -1">
+        <div class="panel-header">
+            <h2 class="panel-title"><span class="panel-icon">⬇</span> Downloads</h2>
+        </div>
+        <div style="padding: 24px; display: grid; gap: 28px;">
+
+            <!-- PDF Reports -->
+            {% if files.pdfs %}
+            <div>
+                <span class="field-label" style="display:block; margin-bottom: 4px;">PDF REPORTS</span>
+                {% if task.task_type == 'full' %}
+                    <p style="font-size:11px; color:var(--text-dim); margin-bottom:12px;">Both accessibility and analysis PDFs are included below.</p>
+                {% elif task.task_type == 'accessibility' %}
+                    <p style="font-size:11px; color:var(--text-dim); margin-bottom:12px;">Accessibility scan PDF.</p>
+                {% else %}
+                    <p style="font-size:11px; color:var(--text-dim); margin-bottom:12px;">Analysis scan PDF.</p>
+                {% endif %}
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for pdf in files.pdfs %}
+                    <a href="{{ url_for('download_file', task_id=task.id, filename='pdf/' + pdf) }}"
+                       class="submit-btn"
+                       style="display:inline-flex; text-decoration:none; align-items:center; gap:8px; font-size:13px; padding: 10px 16px;"
+                       download>
+                        <span style="font-size:16px;">📄</span>
+                        <span>{{ pdf }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Markdown Reports -->
+            {% if files.reports %}
+            <div>
+                <span class="field-label" style="display:block; margin-bottom: 12px;">MARKDOWN REPORTS</span>
+                <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                    {% for filepath, label in files.reports %}
+                    <a href="{{ url_for('download_file', task_id=task.id, filename=filepath) }}"
+                       style="display:inline-flex; align-items:center; gap:8px; padding: 10px 16px; border: 1px solid var(--border); border-radius: 6px; text-decoration:none; color: var(--text); font-size:13px; font-family: var(--font-mono); background: var(--surface-1); transition: border-color 0.2s, color 0.2s;"
+                       onmouseover="this.style.borderColor='var(--accent)';this.style.color='var(--accent)'"
+                       onmouseout="this.style.borderColor='var(--border)';this.style.color='var(--text)'"
+                       download>
+                        <span style="font-size:15px;">📝</span>
+                        <span>{{ label }}</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Screenshots Gallery -->
+    {% if task.status == 'done' and files.screenshots %}
+    <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+            <h2 class="panel-title"><span class="panel-icon">🖼</span> Screenshots</h2>
+            <span style="font-size: 12px; color: var(--text-dim)">{{ files.screenshots | length }} captured</span>
+        </div>
+        <div style="padding: 24px; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 16px;">
+            {% for ss in files.screenshots %}
+            <div class="screenshot-card">
+                <a href="{{ url_for('download_file', task_id=task.id, filename='screenshots/' + ss) }}"
+                   target="_blank" rel="noopener">
+                    <img src="{{ url_for('download_file', task_id=task.id, filename='screenshots/' + ss) }}"
+                         alt="{{ ss }}"
+                         loading="lazy"
+                         style="width:100%; height:160px; object-fit:cover; display:block; border-radius:4px; border:1px solid var(--border);">
+                </a>
+                <p style="margin-top:8px; font-size:11px; font-family:var(--font-mono); color:var(--text-dim); word-break:break-all;">
+                    {{ ss }}
+                </p>
+                <a href="{{ url_for('download_file', task_id=task.id, filename='screenshots/' + ss) }}"
+                   style="font-size:11px; color:var(--accent); text-decoration:none;"
+                   download>⬇ Download</a>
+            </div>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+
+    <!-- Running/Failed state info -->
+    {% if task.status == 'running' %}
+    <section class="panel" style="grid-column: 1 / -1">
+        <div style="padding: 32px; text-align: center;">
+            <div class="spinner" style="width:32px; height:32px; margin: 0 auto 16px;"></div>
+            <p style="color: var(--text-dim)">Task is currently running. Downloads will appear when complete.</p>
+            <p style="font-size:12px; color:var(--text-dim); margin-top:8px;">This page will update automatically.</p>
+        </div>
+    </section>
+    {% elif task.status == 'queued' %}
+    <section class="panel" style="grid-column: 1 / -1">
+        <div style="padding: 32px; text-align: center;">
+            <div class="empty-icon">◷</div>
+            <p style="color: var(--text-dim)">Task is queued. Downloads will appear when complete.</p>
+        </div>
+    </section>
+    {% elif task.status == 'failed' %}
+    <section class="panel" style="grid-column: 1 / -1">
+        <div style="padding: 32px; text-align: center;">
+            <div class="empty-icon" style="color: var(--error, #ff5555)">✕</div>
+            <p style="color: var(--text-dim)">Task failed. No downloads available.</p>
+        </div>
+    </section>
+    {% elif task.status == 'done' and not files.pdfs and not files.reports and not files.screenshots %}
+    <section class="panel" style="grid-column: 1 / -1">
+        <div style="padding: 32px; text-align: center;">
+            <div class="empty-icon">◈</div>
+            <p style="color: var(--text-dim)">Task completed but no downloadable files were found.</p>
+            {% if task.output_dir %}
+            <p style="font-size:12px; color:var(--text-dim); margin-top:8px; font-family:var(--font-mono)">Output dir: {{ task.output_dir }}</p>
+            {% endif %}
+        </div>
+    </section>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh page if task is still running or queued
+const status = "{{ task.status }}";
+if (status === 'running' || status === 'queued') {
+    const evtSource = new EventSource('/events');
+    evtSource.addEventListener('task_done', (e) => {
+        const data = JSON.parse(e.data);
+        if (data.task_id === {{ task.id }}) {
+            evtSource.close();
+            location.reload();
+        }
+    });
+    evtSource.addEventListener('task_failed', (e) => {
+        const data = JSON.parse(e.data);
+        if (data.task_id === {{ task.id }}) {
+            evtSource.close();
+            location.reload();
+        }
+    });
+}
+</script>
+{% endblock %}

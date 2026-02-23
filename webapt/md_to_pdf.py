@@ -1,9 +1,55 @@
 """Markdown to PDF conversion using WeasyPrint."""
 
+import re
 from pathlib import Path
 
 import markdown
 from weasyprint import HTML
+
+
+def _resolve_image_path(img_path: str, md_path: Path) -> str | None:
+    """Resolve a relative image path to an absolute file:// URI.
+
+    Searches the md file's directory and its ancestors to locate the image.
+    This handles paths like 'outputs/qa_admin_scan/screenshots/...' where
+    the image is relative to a parent directory (e.g. webapp/).
+
+    Returns a file:// URI string if found, None otherwise.
+    """
+    if img_path.startswith(("http://", "https://", "file://", "data:")):
+        return None  # Already absolute, no change needed
+
+    # Try resolving relative to md_path's directory first, then walk up
+    search_dir = md_path.parent.resolve()
+    for _ in range(10):  # limit traversal depth
+        candidate = (search_dir / img_path).resolve()
+        if candidate.exists():
+            return candidate.as_uri()
+        parent = search_dir.parent
+        if parent == search_dir:
+            break  # Reached filesystem root
+        search_dir = parent
+
+    return None  # Not found; leave path unchanged
+
+
+def _make_image_paths_absolute(md_content: str, md_path: Path) -> str:
+    """Rewrite relative image paths in Markdown to absolute file:// URIs.
+
+    WeasyPrint requires images to be reachable via file:// when using
+    HTML(string=...). Without this, relative paths that point outside the
+    report directory (e.g. 'outputs/.../screenshots/foo.png') resolve to
+    nothing and the image is blank in the PDF.
+    """
+    def replace_path(m: re.Match) -> str:
+        alt = m.group(1)
+        path = m.group(2)
+        resolved = _resolve_image_path(path, md_path)
+        if resolved:
+            return f"![{alt}]({resolved})"
+        return m.group(0)  # Keep original if not resolved
+
+    return re.sub(r"!\[([^\]]*)\]\(([^)]+)\)", replace_path, md_content)
 
 
 # Professional CSS for report PDFs
@@ -133,6 +179,12 @@ def convert_md_to_pdf(md_path: str | Path, pdf_path: str | Path | None = None) -
 
     md_content = md_path.read_text(encoding="utf-8")
 
+    # Rewrite relative image paths to absolute file:// URIs so WeasyPrint can
+    # find them even when images live outside the report's own directory.
+    # (e.g. 'outputs/qa_admin_scan/screenshots/...' is relative to webapp/, not
+    #  to accessibility_reports/ where the .md lives)
+    md_content = _make_image_paths_absolute(md_content, md_path)
+
     # Convert MD to HTML
     html_body = markdown.markdown(
         md_content,
@@ -150,8 +202,9 @@ def convert_md_to_pdf(md_path: str | Path, pdf_path: str | Path | None = None) -
 </body>
 </html>"""
 
-    # Use the markdown file's directory as base_url so relative image paths resolve
-    HTML(string=html_doc, base_url=str(md_path.parent)).write_pdf(str(pdf_path))
+    # base_url is kept for any remaining relative resources; image paths are
+    # now absolute so this only matters for edge cases.
+    HTML(string=html_doc, base_url=md_path.parent.resolve().as_uri() + "/").write_pdf(str(pdf_path))
 
     return pdf_path
 

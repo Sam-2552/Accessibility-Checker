@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% block title %}Admin — AppLens{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">ADMIN PANEL</h1>
+        <p class="page-subtitle">User management and all tasks</p>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+
+    <!-- Create User -->
+    <section class="panel">
+        <div class="panel-header">
+            <h2 class="panel-title"><span class="panel-icon">⊕</span> Create User</h2>
+        </div>
+        <form method="POST" action="{{ url_for('admin_create_user') }}" style="padding: 24px; display: grid; gap: 16px;">
+            <div class="field-group">
+                <label class="field-label" for="new_username">USERNAME</label>
+                <div class="field-wrapper">
+                    <span class="field-prefix">$</span>
+                    <input class="field-input" type="text" id="new_username" name="username" required autocomplete="off">
+                </div>
+            </div>
+            <div class="field-group">
+                <label class="field-label" for="new_password">PASSWORD</label>
+                <div class="field-wrapper">
+                    <span class="field-prefix">*</span>
+                    <input class="field-input" type="password" id="new_password" name="password" required>
+                </div>
+            </div>
+            <div class="field-group">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+                    <input type="checkbox" name="is_admin" value="1">
+                    <span class="field-label" style="margin:0">ADMIN PRIVILEGES</span>
+                </label>
+            </div>
+            <div class="form-actions">
+                <button class="submit-btn" type="submit"><span>CREATE USER</span><span class="submit-arrow">→</span></button>
+            </div>
+        </form>
+    </section>
+
+    <!-- All Tasks -->
+    <section class="panel" style="grid-column: 1 / -1">
+        <div class="panel-header">
+            <h2 class="panel-title"><span class="panel-icon">≡</span> All Tasks (last 100)</h2>
+        </div>
+        {% if tasks %}
+        <div class="tasks-table-wrapper">
+            <table class="tasks-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>User</th>
+                        <th>Type</th>
+                        <th>Target</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for task in tasks %}
+                    <tr class="task-row status-row-{{ task.status }}">
+                        <td class="td-id">{{ task.id }}</td>
+                        <td>{{ task.username }}</td>
+                        <td><span class="type-badge type-{{ task.task_type }}">{{ task.task_type }}</span></td>
+                        <td class="td-url"><span class="url-text">{{ task.target_url }}</span></td>
+                        <td><span class="status-badge {{ task.status }}">{{ task.status.upper() }}</span></td>
+                        <td class="td-time">{{ task.created_at[:16] }}</td>
+                        <td><a href="{{ url_for('task_detail', task_id=task.id) }}" class="view-btn">View →</a></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="queue-empty"><div class="empty-icon">◈</div><p>No tasks yet</p></div>
+        {% endif %}
+    </section>
+
+</div>
+{% endblock %}

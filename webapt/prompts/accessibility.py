@@ -62,7 +62,7 @@ For each role tested:
 - NEVER navigate away from a loaded page to check another URL — always open a NEW tab first
 - Always wait for pages to fully load before taking screenshots (use browser_wait_for or wait 3-5 seconds)
 - Complete all checks for one URL (navigate + wait + screenshot + login tests) before moving to the next
-- Use save_screenshot_with_metadata tool for consistent screenshot naming
+- Use save_screenshot_with_metadata tool for consistent screenshot naming (pass agent_name='accessibility')
 - Use write_executive_summary tool to generate the summary table
 - Use file_write to save the final report
 - Include all screenshots as embedded markdown images: ![description](path)

@@ -38,8 +38,17 @@ def create_playwright_mcp(label: str, headless: bool = True) -> MCPClient:
     if chromium_exe:
         args.extend(["--executable-path", chromium_exe])
 
+    # When running headed, ensure the subprocess can find the display server.
+    # Background workers (systemd, Flask threads) often lack DISPLAY/WAYLAND_DISPLAY.
+    env: dict[str, str] | None = None
+    if not headless:
+        env = dict(os.environ)
+        # Guarantee a DISPLAY is set (fall back to :0 which is the common default)
+        if "DISPLAY" not in env and "WAYLAND_DISPLAY" not in env:
+            env.setdefault("DISPLAY", ":0")
+
     return MCPClient(
-        lambda args=args: stdio_client(
-            StdioServerParameters(command="npx", args=args)
+        lambda args=args, env=env: stdio_client(
+            StdioServerParameters(command="npx", args=args, env=env)
         )
     )

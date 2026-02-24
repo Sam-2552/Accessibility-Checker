@@ -96,6 +96,15 @@ def init_db():
                 created_at  TEXT NOT NULL DEFAULT (datetime('now')),
                 expires_at  TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS task_credentials (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                task_id     INTEGER NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+                url         TEXT NOT NULL,
+                role        TEXT NOT NULL DEFAULT '',
+                username    TEXT NOT NULL DEFAULT '',
+                password    TEXT NOT NULL DEFAULT ''
+            );
         """)
         # Seed a default admin if no users exist
         row = conn.execute("SELECT COUNT(*) as c FROM users").fetchone()
@@ -272,6 +281,33 @@ def get_all_tasks(limit: int = 50):
                JOIN users u ON u.id = t.user_id
                ORDER BY t.created_at DESC LIMIT ?""",
             (limit,),
+        ).fetchall()
+        return [dict(r) for r in rows]
+
+
+def store_task_credentials(task_id: int, credentials: list[dict]) -> None:
+    """Store per-URL credentials from CSV upload.
+
+    Args:
+        task_id: The task ID to associate credentials with.
+        credentials: List of dicts with keys: url, role, username, password.
+    """
+    with db_conn() as conn:
+        for cred in credentials:
+            conn.execute(
+                """INSERT INTO task_credentials (task_id, url, role, username, password)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (task_id, cred["url"], cred.get("role", ""),
+                 cred.get("username", ""), cred.get("password", "")),
+            )
+
+
+def get_task_credentials(task_id: int) -> list[dict]:
+    """Retrieve per-URL credentials for a task."""
+    with db_conn() as conn:
+        rows = conn.execute(
+            "SELECT url, role, username, password FROM task_credentials WHERE task_id = ?",
+            (task_id,),
         ).fetchall()
         return [dict(r) for r in rows]
 

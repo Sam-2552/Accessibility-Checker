@@ -65,6 +65,7 @@ body {
     line-height: 1.6;
     color: #333;
     max-width: 100%;
+    overflow: hidden;
 }
 
 h1 {
@@ -114,12 +115,15 @@ tr:nth-child(even) {
 }
 
 img {
-    max-width: 100%;
+    display: block;
+    max-width: 100% !important;
+    width: auto;
     height: auto;
     border: 1px solid #ddd;
     border-radius: 4px;
     margin: 8pt 0;
     page-break-inside: avoid;
+    box-sizing: border-box;
 }
 
 code {

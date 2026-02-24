@@ -115,11 +115,89 @@ def dashboard():
 @login_required
 def submit_task():
     import re as _re
-    task_input = request.form.get("task_input", "").strip()
-    project_name = request.form.get("project_name", "").strip() or None
+    import csv
+    import io
+
+    input_mode = request.form.get("input_mode", "text")
+    project_name = request.form.get("project_name", "").strip()
+
+    # ── Parse input: text mode or CSV mode ─────────────────────────────────
+    csv_credentials = []  # list of dicts: {url, role, username, password}
+
+    if input_mode == "csv":
+        csv_file = request.files.get("csv_file")
+        if not csv_file or csv_file.filename == "":
+            flash("Please select a CSV file to upload.", "error")
+            return redirect(url_for("dashboard"))
+
+        try:
+            stream = io.StringIO(csv_file.stream.read().decode("utf-8-sig"))
+            reader = csv.DictReader(stream)
+
+            # Validate headers
+            if reader.fieldnames is None:
+                flash("CSV file is empty.", "error")
+                return redirect(url_for("dashboard"))
+
+            fieldnames_lower = [f.strip().lower() for f in reader.fieldnames]
+            if "url" not in fieldnames_lower:
+                flash("CSV must have a 'url' column. Found columns: "
+                      + ", ".join(reader.fieldnames), "error")
+                return redirect(url_for("dashboard"))
+
+            # Build column name mapping (original → lowercase)
+            col_map = {orig: low for orig, low in zip(reader.fieldnames, fieldnames_lower)}
+
+            urls = []
+            for row_num, row in enumerate(reader, start=2):
+                norm_row = {col_map.get(k, k.strip().lower()): (v or "").strip() for k, v in row.items()}
+                url = norm_row.get("url", "").strip()
+                if not url:
+                    continue
+                urls.append(url)
+                csv_credentials.append({
+                    "url": url,
+                    "role": norm_row.get("role", ""),
+                    "username": norm_row.get("username", ""),
+                    "password": norm_row.get("password", ""),
+                })
+
+            if not urls:
+                flash("CSV contains no valid URLs.", "error")
+                return redirect(url_for("dashboard"))
+
+            # Build task_input text from CSV rows (compatible with existing pipeline)
+            lines = []
+            for cred in csv_credentials:
+                line = cred["url"]
+                parts = []
+                if cred["role"]:
+                    parts.append(f"role: {cred['role']}")
+                if cred["username"] and cred["password"]:
+                    parts.append(f"credentials: {cred['username']}/{cred['password']}")
+                elif cred["username"]:
+                    parts.append(f"username: {cred['username']}")
+                if parts:
+                    line += " - " + ", ".join(parts)
+                lines.append(line)
+
+            task_input = "\n".join(lines)
+
+        except UnicodeDecodeError:
+            flash("CSV file must be UTF-8 encoded.", "error")
+            return redirect(url_for("dashboard"))
+        except csv.Error as e:
+            flash(f"Malformed CSV: {e}", "error")
+            return redirect(url_for("dashboard"))
+    else:
+        task_input = request.form.get("task_input", "").strip()
 
     if not task_input:
         flash("Task input is required.", "error")
+        return redirect(url_for("dashboard"))
+
+    if not project_name:
+        flash("Project name is required.", "error")
         return redirect(url_for("dashboard"))
 
     # Read scan_type from radio buttons; map 'both' → 'full' for DB storage
@@ -136,16 +214,6 @@ def submit_task():
     found_urls = _re.findall(url_pattern, task_input)
     target_url = found_urls[0] if found_urls else ""
 
-    # Auto-generate project name from first URL or first words of input
-    if not project_name:
-        if target_url:
-            domain = target_url.split("//")[-1].split("/")[0].replace(".", "_")
-            project_name = domain
-        else:
-            # Use first few words of input as project name
-            words = _re.sub(r'[^\w\s]', '', task_input).split()[:4]
-            project_name = "_".join(words) if words else "task"
-
     task_id = db.enqueue_task(
         user_id=g.user["id"],
         task_type=task_type,     # accessibility / analysis / full
@@ -153,6 +221,10 @@ def submit_task():
         extra_task=task_input,   # Full unified input stored here
         project_name=project_name,
     )
+
+    # Store per-URL credentials from CSV upload
+    if csv_credentials:
+        db.store_task_credentials(task_id, csv_credentials)
 
     # Broadcast queue update
     wk.broadcast_update("queue_updated", {"queue": db.get_queue()})

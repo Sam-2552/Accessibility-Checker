@@ -29,7 +29,7 @@
                 Submit Task
             </h2>
         </div>
-        <form class="task-form" method="POST" action="{{ url_for('submit_task') }}">
+        <form class="task-form" method="POST" action="{{ url_for('submit_task') }}" enctype="multipart/form-data">
             <!-- Scan Type Selection -->
             <div class="form-row">
                 <div class="field-group">
@@ -63,25 +63,64 @@
                 </div>
             </div>
 
+            <!-- Input Mode Toggle -->
             <div class="form-row">
+                <div class="field-group">
+                    <label class="field-label">INPUT MODE</label>
+                    <div class="radio-group">
+                        <label class="radio-option">
+                            <input type="radio" name="input_mode" value="text" checked onchange="toggleInputMode('text')">
+                            <span class="radio-custom"></span>
+                            <span class="radio-label">
+                                <span class="radio-name">Text</span>
+                                <span class="radio-desc">Paste URLs and descriptions</span>
+                            </span>
+                        </label>
+                        <label class="radio-option">
+                            <input type="radio" name="input_mode" value="csv" onchange="toggleInputMode('csv')">
+                            <span class="radio-custom"></span>
+                            <span class="radio-label">
+                                <span class="radio-name">CSV Upload</span>
+                                <span class="radio-desc">Upload CSV with url, role, username, password columns</span>
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Text Input (default) -->
+            <div class="form-row" id="text-input-row">
                 <div class="field-group">
                     <label class="field-label" for="task_input">TASK</label>
                     <textarea class="field-textarea" id="task_input" name="task_input"
                               placeholder="Describe your task. Examples:&#10;• https://example.com&#10;• Check https://myapp.com - login as admin with credentials admin/password123&#10;• Analyze https://app.com and https://staging.app.com - use admin/pass for both&#10;• https://myapp.com/dashboard, https://myapp.com/settings - credentials: user@email.com / pass123"
-                              rows="5" required></textarea>
+                              rows="5"></textarea>
                     <p style="margin-top:6px; font-size:11px; color:var(--text-dim);">
                         Multiple URLs processed sequentially. Select scan type above.
                     </p>
                 </div>
             </div>
 
+            <!-- CSV Upload (hidden by default) -->
+            <div class="form-row" id="csv-input-row" style="display:none;">
+                <div class="field-group">
+                    <label class="field-label" for="csv_file">CSV FILE</label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv,text/csv"
+                           style="padding:10px; border:1px solid var(--border); border-radius:6px; background:var(--bg-input, #1a1a2e); color:var(--text); width:100%;">
+                    <p style="margin-top:6px; font-size:11px; color:var(--text-dim);">
+                        CSV columns: <code>url</code> (required), <code>role</code>, <code>username</code>, <code>password</code> (optional).
+                        Each row is one URL to scan with optional auth credentials.
+                    </p>
+                </div>
+            </div>
+
             <div class="form-row">
                 <div class="field-group">
-                    <label class="field-label" for="project_name">PROJECT NAME <span class="optional">(optional — auto-generated from URL)</span></label>
+                    <label class="field-label" for="project_name">PROJECT NAME <span class="required-star">*</span></label>
                     <div class="field-wrapper">
                         <span class="field-prefix">#</span>
                         <input class="field-input" type="text" id="project_name" name="project_name"
-                               placeholder="auto-generated if empty" autocomplete="off">
+                               placeholder="e.g. my-website-audit" autocomplete="off" required>
                     </div>
                 </div>
             </div>
@@ -252,6 +291,24 @@
 
 {% block scripts %}
 <script>
+// Input mode toggle (text vs CSV)
+function toggleInputMode(mode) {
+    const textRow = document.getElementById('text-input-row');
+    const csvRow = document.getElementById('csv-input-row');
+    const taskInput = document.getElementById('task_input');
+    const csvFile = document.getElementById('csv_file');
+    if (mode === 'csv') {
+        textRow.style.display = 'none';
+        csvRow.style.display = '';
+        taskInput.removeAttribute('required');
+        taskInput.value = '';
+    } else {
+        textRow.style.display = '';
+        csvRow.style.display = 'none';
+        csvFile.value = '';
+    }
+}
+
 // SSE live queue updates
 const queueContainer = document.getElementById('queueContainer');
 const queueCount = document.getElementById('queueCount');
